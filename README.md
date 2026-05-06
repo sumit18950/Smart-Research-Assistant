@@ -1,7 +1,12 @@
-Smart Research Assistant (Multi-Source RAG System)
+# Smart Research Assistant (Multi-Source RAG System)
+
 A production-grade AI research assistant that ingests PDFs, searches the web, and answers questions with citations, confidence scores, and comparative analysis — powered by LangChain, LangGraph, OpenAI/Claude, and FAISS/Pinecone.
 
-Architecture
+---
+
+## Architecture
+
+```
 React Frontend ──> FastAPI Backend ──> LangGraph Agent
                                           │
                         ┌─────────────────┼─────────────────┐
@@ -22,12 +27,20 @@ React Frontend ──> FastAPI Backend ──> LangGraph Agent
                                             ▼
                                   Structured Response
                                   (Answer + Citations + Confidence)
-Data Flow
-Ingestion: PDF upload → text extraction (PyPDF) → recursive chunking (1000 chars, 200 overlap) → embedding (OpenAI) → vector store
-Query: User query → LangGraph agent classifies intent → retrieves context → injects into prompt → LLM generates grounded answer
-Output: Structured response with answer, source citations, confidence score, optional comparison table
-Evaluation: RAGAS metrics (faithfulness, relevancy, precision, recall)
-Project Structure
+```
+
+### Data Flow
+
+1. **Ingestion**: PDF upload → text extraction (PyPDF) → recursive chunking (1000 chars, 200 overlap) → embedding (OpenAI) → vector store
+2. **Query**: User query → LangGraph agent classifies intent → retrieves context → injects into prompt → LLM generates grounded answer
+3. **Output**: Structured response with answer, source citations, confidence score, optional comparison table
+4. **Evaluation**: RAGAS metrics (faithfulness, relevancy, precision, recall)
+
+---
+
+## Project Structure
+
+```
 smart-research-assistant/
 ├── backend/
 │   ├── app/
@@ -77,12 +90,21 @@ smart-research-assistant/
 │   └── nginx.conf
 ├── docker-compose.yml
 └── README.md
-Quick Start
-Prerequisites
-Python 3.11+
-Node.js 18+
-OpenAI API key (or Anthropic API key)
-1. Backend Setup
+```
+
+---
+
+## Quick Start
+
+### Prerequisites
+
+- Python 3.11+
+- Node.js 18+
+- OpenAI API key (or Anthropic API key)
+
+### 1. Backend Setup
+
+```bash
 cd backend
 
 # Create virtual environment
@@ -98,13 +120,21 @@ cp .env.example .env
 
 # Start backend
 uvicorn app.main:app --reload --port 8000
-2. Frontend Setup
+```
+
+### 2. Frontend Setup
+
+```bash
 cd frontend
 
 npm install
 npm run dev
 # Opens at http://localhost:3000
-3. Docker Deployment
+```
+
+### 3. Docker Deployment
+
+```bash
 # Copy and configure env
 cp backend/.env.example backend/.env
 # Edit backend/.env
@@ -114,24 +144,39 @@ docker-compose up --build
 # Frontend: http://localhost
 # Backend:  http://localhost:8000
 # API docs: http://localhost:8000/docs
-API Endpoints
-Endpoint	Method	Description
-/api/v1/upload-doc	POST	Upload and ingest a PDF document
-/api/v1/query	POST	Query the research assistant
-/api/v1/evaluate	POST	Run RAGAS evaluation
-/api/v1/health	GET	System health check
-Example: Upload Document
+```
+
+---
+
+## API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/v1/upload-doc` | POST | Upload and ingest a PDF document |
+| `/api/v1/query` | POST | Query the research assistant |
+| `/api/v1/evaluate` | POST | Run RAGAS evaluation |
+| `/api/v1/health` | GET | System health check |
+
+### Example: Upload Document
+
+```bash
 curl -X POST http://localhost:8000/api/v1/upload-doc \
   -F "file=@research_paper.pdf"
-Response:
+```
 
+**Response:**
+```json
 {
   "document_id": "a3b2c1d4e5f6g7h8",
   "filename": "research_paper.pdf",
   "total_chunks": 47,
   "message": "Successfully processed research_paper.pdf: 47 chunks indexed."
 }
-Example: Query
+```
+
+### Example: Query
+
+```bash
 curl -X POST http://localhost:8000/api/v1/query \
   -H "Content-Type: application/json" \
   -d '{
@@ -140,8 +185,10 @@ curl -X POST http://localhost:8000/api/v1/query \
     "use_web_search": false,
     "compare_sources": false
   }'
-Response:
+```
 
+**Response:**
+```json
 {
   "answer": "The study employed a mixed-methods approach combining quantitative analysis with qualitative interviews. Specifically, the researchers used a randomized controlled trial (RCT) design with 500 participants [Source: research_paper]...",
   "sources": [
@@ -162,7 +209,11 @@ Response:
     "total_tokens": 1590
   }
 }
-Example: Evaluate
+```
+
+### Example: Evaluate
+
+```bash
 curl -X POST http://localhost:8000/api/v1/evaluate \
   -H "Content-Type: application/json" \
   -d '{
@@ -175,49 +226,74 @@ curl -X POST http://localhost:8000/api/v1/evaluate \
       "Key limitations include..."
     ]
   }'
-Key Design Decisions
-Chunking Strategy
-Recursive Character Splitting (1000 chars, 200 overlap) because:
+```
 
-Respects natural text boundaries (paragraphs > sentences > words)
-1000 chars balances context richness with embedding precision
-200-char overlap prevents information loss at chunk boundaries
-Agentic Workflow (LangGraph)
+---
+
+## Key Design Decisions
+
+### Chunking Strategy
+**Recursive Character Splitting** (1000 chars, 200 overlap) because:
+- Respects natural text boundaries (paragraphs > sentences > words)
+- 1000 chars balances context richness with embedding precision
+- 200-char overlap prevents information loss at chunk boundaries
+
+### Agentic Workflow (LangGraph)
 The agent dynamically selects from 4 strategies:
+1. **RAG Search** — documents have high-relevance matches
+2. **Web Search** — documents lack context, supplement from web
+3. **Summarize** — query asks for overview/digest
+4. **Compare** — query asks to contrast sources
 
-RAG Search — documents have high-relevance matches
-Web Search — documents lack context, supplement from web
-Summarize — query asks for overview/digest
-Compare — query asks to contrast sources
-Vector Store Switching
+### Vector Store Switching
 Factory pattern allows swapping FAISS (local dev) ↔ Pinecone (production) via a single env variable, with no code changes.
 
-Guardrails
-Prompt injection detection: Regex patterns for common attacks
-Confidence thresholding: Low-confidence answers get explicit warnings
-Hallucination check: Optional LLM-based verification against context
-Input sanitization: Null byte removal, length limits
-Running Tests
+### Guardrails
+- **Prompt injection detection**: Regex patterns for common attacks
+- **Confidence thresholding**: Low-confidence answers get explicit warnings
+- **Hallucination check**: Optional LLM-based verification against context
+- **Input sanitization**: Null byte removal, length limits
+
+---
+
+## Running Tests
+
+```bash
 cd backend
 pip install pytest
 pytest tests/ -v
-Running RAGAS Evaluation
+```
+
+## Running RAGAS Evaluation
+
+```bash
 cd smart-research-assistant
 python evaluation/run_evaluation.py
-Configuration Reference
-Variable	Default	Description
-LLM_PROVIDER	openai	openai or anthropic
-VECTOR_STORE_TYPE	faiss	faiss or pinecone
-CHUNK_SIZE	1000	Characters per chunk
-CHUNK_OVERLAP	200	Overlap between chunks
-TOP_K_RESULTS	5	Default retrieval count
-CONFIDENCE_THRESHOLD	0.6	Below this, answers get warnings
-MAX_FILE_SIZE_MB	50	Upload size limit
-Tech Stack
-Layer	Technology
-Frontend	React 18, Vite, Axios, react-dropzone, react-markdown
-Backend	Python, FastAPI, Uvicorn
-AI/ML	LangChain, LangGraph, OpenAI/Claude APIs
-Vector DB	FAISS (local) / Pinecone (cloud)
-Evaluation	RAGAS (faithfulness, relevancy, precision, recall)
-Deployment	Docker, docker-compose, nginx
+```
+
+---
+
+## Configuration Reference
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `LLM_PROVIDER` | openai | `openai` or `anthropic` |
+| `VECTOR_STORE_TYPE` | faiss | `faiss` or `pinecone` |
+| `CHUNK_SIZE` | 1000 | Characters per chunk |
+| `CHUNK_OVERLAP` | 200 | Overlap between chunks |
+| `TOP_K_RESULTS` | 5 | Default retrieval count |
+| `CONFIDENCE_THRESHOLD` | 0.6 | Below this, answers get warnings |
+| `MAX_FILE_SIZE_MB` | 50 | Upload size limit |
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Frontend | React 18, Vite, Axios, react-dropzone, react-markdown |
+| Backend | Python, FastAPI, Uvicorn |
+| AI/ML | LangChain, LangGraph, OpenAI/Claude APIs |
+| Vector DB | FAISS (local) / Pinecone (cloud) |
+| Evaluation | RAGAS (faithfulness, relevancy, precision, recall) |
+| Deployment | Docker, docker-compose, nginx |
